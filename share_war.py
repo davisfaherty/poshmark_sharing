@@ -2,6 +2,7 @@ import selenium, time, argparse, sys, os, textwrap
 import numpy as np
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
 
 
 def rt(d):
@@ -27,37 +28,37 @@ def login(debugger=False):
             [*] logging into Poshmark seller account: {}...
                 the share war will begin momentarily...
             '''.format(poshmark_username)))
-        username = driver.find_element_by_name("login_form[username_email]")
+        username = driver.find_element("name", "login_form[username_email]")
         username.send_keys(poshmark_username)
-        time.sleep(rt(5))
+        time.sleep(rt(1))
 
-        password = driver.find_element_by_name("login_form[password]")
+        password = driver.find_element("name","login_form[password]")
         password.send_keys(poshmark_password)
-        time.sleep(rt(5))
+        time.sleep(rt(1))
 
         password.send_keys(Keys.RETURN)
-        time.sleep(rt(5))
+        time.sleep(rt(1))
 
         ## Check for Captcha
         try:
-            captcha_pat = "//span[@class='base_error_message']"
-            captcha_fail = driver.find_element_by_xpath(captcha_pat)
+            captcha_fail = driver.find_element(By.CLASS_NAME, "error_banner")
+            time.sleep(rt(10))
             if len(str(captcha_fail)) > 100:
                 print(textwrap.dedent('''
                     [*] caught by captchas...
                     [*] please complete captchas
-                        robots game before proceeding...
-                    [*] please proceed to terminal debugger
+                        robots game before proceeding then log in ...
+                    [*] then proceed to terminal debugger and press q + Enter
                     '''))
                 login(debugger=True)
                 return
             else:
                 pass
         except Exception as e:
+            print(e)
             pass
  
         ## Navigate to Seller Page
-        time.sleep(rt(10))
         seller_page = get_seller_page_url(args.account)
         driver.get(seller_page)
 
@@ -77,7 +78,8 @@ def login(debugger=False):
 
         return True
 
-    except:
+    except Exception as e:
+        print(e)
         ## Captcha Catch
         print(textwrap.dedent('''
             [*] ERROR in Share War: Thrwarted by Captchas
@@ -163,15 +165,19 @@ def scroll_page(n, delay=3):
 
 
 def get_closet_urls():
-    items = driver.find_elements_by_xpath("//div[@class='item-details']")
-    urls = [i.find_element_by_css_selector('a').get_attribute('href') for i in items]
+    items = driver.find_elements("xpaths", "//div[@class='item-details']")
+    urls = [i.find_element("css selector", 'a').get_attribute('href') for i in items]
     return urls
 
 
 def get_closet_share_icons():
-    item_pat = "//div[@class='social-info social-actions d-fl ai-c jc-c']"
-    items = driver.find_elements_by_xpath(item_pat)
-    share_icons = [i.find_element_by_css_selector("a[class='share']") for i in items]
+    item_path = '//*[@class="d--fl ai--c social-action-bar__action social-action-bar__share"]'
+    items = driver.find_elements("xpath", item_path)
+    print("len(items)")
+    print(len(items))
+    share_icons = [i.find_element("css selector", 'i.icon.share-gray-large') for i in items]
+    print("len(share_icons)")
+    print(len(share_icons))
     return share_icons
 
 
@@ -181,8 +187,8 @@ def clicks_share_followers(share_icon, d=4.5):
     driver.execute_script("arguments[0].click();", share_icon); time.sleep(rt(d))
 
     ## Second share click
-    share_pat = "//a[@class='pm-followers-share-link grey']"
-    share_followers = driver.find_element_by_xpath(share_pat)
+    share_pat = '//a[contains(@class, "internal-share__link")]'
+    share_followers = driver.find_element("xpath", share_pat)
     driver.execute_script("arguments[0].click();", share_followers); time.sleep(rt(d))
 
 
@@ -240,8 +246,9 @@ def deploy_share_war(n=3, order=True, random_subset=0):
         print("[*] closet successfully shared...posh-on...")
         pass
         
-    except:
+    except Exception as e:
         print("[*] ERROR in Share War")
+        print(e)
         pass
     
     ## Closing Message
